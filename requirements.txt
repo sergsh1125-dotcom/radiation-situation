@@ -1,0 +1,6 @@
+pandas
+folium
+numpy
+matplotlib
+scipy
+fpdf

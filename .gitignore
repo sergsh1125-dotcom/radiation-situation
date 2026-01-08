@@ -1,0 +1,5 @@
+radiation_database.csv
+map_output.html
+Report_*.pdf
+__pycache__/
+.vscode/
