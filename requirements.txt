@@ -1,6 +1,4 @@
-pandas
-folium
-numpy
-matplotlib
-scipy
-fpdf
+streamlit>=1.30.0
+pandas>=2.1.0
+folium>=0.16.0
+streamlit-folium>=0.18.0
