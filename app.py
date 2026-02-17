@@ -1,4 +1,4 @@
-iimport streamlit as st
+import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
@@ -6,7 +6,6 @@ from streamlit_folium import st_folium
 # ===============================
 # 1. Налаштування сторінки
 # ===============================
-# Додано page_icon="☢️" для вкладки браузера
 st.set_page_config(page_title="КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ", page_icon="☢️", layout="wide")
 
 st.markdown("""
@@ -18,22 +17,6 @@ st.markdown("""
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
 
-# ===============================
-# 2. Функція Спеціального Маркера (SVG)
-# ===============================
-# ... (ця функція залишається без змін) ...
-def get_custom_marker_html(label_text):
-    # ... код SVG маркера ...
-    return icon_html
-
-# ===============================
-# 3. Інтерфейс (Управління)
-# ===============================
-# ТУТ ЗМІНЕНО ІКОНКУ В ЗАГОЛОВКУ:
-st.header("☢️ КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ")
-
-col_map, col_gui = st.columns([3, 1])
-# ... (далі код без змін) ...
 # ===============================
 # 2. Функція Спеціального Маркера (SVG)
 # ===============================
@@ -69,7 +52,7 @@ def get_custom_marker_html(label_text):
 # ===============================
 # 3. Інтерфейс (Управління)
 # ===============================
-st.header("📍 КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ")
+st.header("☢️ КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ")
 
 col_map, col_gui = st.columns([3, 1])
 
@@ -83,8 +66,10 @@ with col_gui:
             try:
                 df_new = pd.read_csv(up_file, sep=None, engine='python')
                 st.session_state.data = pd.concat([st.session_state.data, df_new], ignore_index=True)
+                st.success("Дані успішно додано!")
                 st.rerun()
-            except: st.error("Помилка файлу")
+            except Exception as e:
+                st.error(f"Помилка файлу: {e}")
 
     # Ручне додавання
     with st.expander("➕ Додати вручну"):
@@ -93,14 +78,14 @@ with col_gui:
         val = st.number_input("Значення", step=0.00001, format="%.5f")
         uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
         tim = st.text_input("Дата/час", value=pd.Timestamp.now().strftime("%d.%m.%Y %H:%M"))
-        if st.button("Зберегти"):
+        if st.button("Зберегти точку"):
             row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
             st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
             st.rerun()
 
     st.divider()
 
-    # Експорт тільки в HTML
+    # Експорт в HTML
     if not st.session_state.data.empty:
         st.subheader("💾 Збереження")
         
@@ -127,7 +112,7 @@ with col_gui:
 # ===============================
 with col_map:
     if st.session_state.data.empty:
-        st.info("Додайте дані для відображення.")
+        st.info("Використовуйте панель праворуч для додавання даних.")
     else:
         df = st.session_state.data.copy()
         for c in ['lat', 'lon', 'value']: df[c] = pd.to_numeric(df[c], errors='coerce')
@@ -156,4 +141,4 @@ with col_map:
                 gp.add_to(m)
 
             folium.LayerControl(collapsed=False).add_to(m)
-            st_folium(m, width="100%", height=700, key="final_map_mobile")
+            st_folium(m, width="100%", height=700, key="v_final_blue")
