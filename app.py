@@ -1,4 +1,4 @@
-import streamlit as st
+iimport streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
@@ -6,7 +6,8 @@ from streamlit_folium import st_folium
 # ===============================
 # 1. Налаштування сторінки
 # ===============================
-st.set_page_config(page_title="КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ", layout="wide")
+# Додано page_icon="☢️" для вкладки браузера
+st.set_page_config(page_title="КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ", page_icon="☢️", layout="wide")
 
 st.markdown("""
 <style>
@@ -17,6 +18,22 @@ st.markdown("""
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
 
+# ===============================
+# 2. Функція Спеціального Маркера (SVG)
+# ===============================
+# ... (ця функція залишається без змін) ...
+def get_custom_marker_html(label_text):
+    # ... код SVG маркера ...
+    return icon_html
+
+# ===============================
+# 3. Інтерфейс (Управління)
+# ===============================
+# ТУТ ЗМІНЕНО ІКОНКУ В ЗАГОЛОВКУ:
+st.header("☢️ КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ")
+
+col_map, col_gui = st.columns([3, 1])
+# ... (далі код без змін) ...
 # ===============================
 # 2. Функція Спеціального Маркера (SVG)
 # ===============================
