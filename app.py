@@ -22,6 +22,7 @@ if "data" not in st.session_state:
 # 2. Функція Синьої Крапки з підписом
 # ===============================
 def get_custom_marker_html(value_text, date_text):
+    """Створює синю крапку та синій дворядковий напис з лінією"""
     icon_html = f"""
     <div style="position: relative; display: flex; align-items: center; width: 200px;">
         <div style="
@@ -87,8 +88,40 @@ with col_gui:
 
     st.divider()
 
-    # Експорт
+    # --- БЛОК ЕКСПОРТУ ТА ОЧИЩЕННЯ ---
     if not st.session_state.data.empty:
+        st.subheader("💾 Збереження")
+        
+        # Підготовка даних для HTML-файлу
+        d_export = st.session_state.data.copy()
+        d_export['lat'] = pd.to_numeric(d_export['lat'], errors='coerce')
+        d_export['lon'] = pd.to_numeric(d_export['lon'], errors='coerce')
+        d_export = d_export.dropna(subset=['lat', 'lon'])
+        
+        if not d_export.empty:
+            m_html = folium.Map(location=[d_export.lat.mean(), d_export.lon.mean()], zoom_start=10)
+            for _, r in d_export.iterrows():
+                v_s = f"{float(r['value']):.3f}".rstrip('0').rstrip('.')
+                val_txt = f"{v_s} {r['unit']}"
+                date_txt = str(r['time'])
+                folium.Marker(
+                    [r.lat, r.lon],
+                    icon=folium.DivIcon(
+                        icon_anchor=(5, 12),
+                        html=get_custom_marker_html(val_txt, date_txt)
+                    )
+                ).add_to(m_html)
+            
+            # Кнопка завантаження
+            st.download_button(
+                "🌐 Завантажити HTML карту", 
+                data=m_html._repr_html_(), 
+                file_name="radiation_map.html", 
+                mime="text/html", 
+                use_container_width=True
+            )
+
+        # Кнопка очищення
         if st.button("🧹 Очистити карту", use_container_width=True):
             st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
             st.rerun()
@@ -97,27 +130,21 @@ with col_gui:
 # 4. Візуалізація Карти
 # ===============================
 with col_map:
-    # 1. Визначаємо початкові координати (Київ або центр даних)
+    # Визначаємо центр карти
     if st.session_state.data.empty:
-        start_lat, start_lon, zoom = 49.0, 31.0, 6  # Огляд всієї України
+        start_lat, start_lon, zoom = 49.0, 31.0, 6
     else:
-        # Чистимо дані від помилок для коректного центрування
         df_clean = st.session_state.data.copy()
         df_clean['lat'] = pd.to_numeric(df_clean['lat'], errors='coerce')
         df_clean['lon'] = pd.to_numeric(df_clean['lon'], errors='coerce')
         df_clean = df_clean.dropna(subset=['lat', 'lon'])
-        
         if not df_clean.empty:
-            start_lat = df_clean.lat.mean()
-            start_lon = df_clean.lon.mean()
-            zoom = 9
+            start_lat, start_lon, zoom = df_clean.lat.mean(), df_clean.lon.mean(), 9
         else:
             start_lat, start_lon, zoom = 49.0, 31.0, 6
 
-    # 2. Створюємо базову карту (вона завантажиться в будь-якому випадку)
     m = folium.Map(location=[start_lat, start_lon], zoom_start=zoom, control_scale=True)
 
-    # 3. Наносимо дані, якщо вони є
     if not st.session_state.data.empty:
         df = st.session_state.data.copy()
         df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
@@ -125,7 +152,6 @@ with col_map:
         df['value'] = pd.to_numeric(df['value'], errors='coerce')
         df = df.dropna(subset=['lat', 'lon', 'value'])
 
-        # Групування по днях (шари)
         for day_val in sorted(df['time'].unique(), reverse=True):
             gp = folium.FeatureGroup(name=f"📅 {day_val}")
             for _, r in df[df['time'] == day_val].iterrows():
@@ -144,5 +170,4 @@ with col_map:
         
         folium.LayerControl(collapsed=False).add_to(m)
 
-    # 4. Відображення
     st_folium(m, width="100%", height=750, key="main_radiation_map")
