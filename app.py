@@ -8,7 +8,6 @@ from datetime import datetime
 # 1. Налаштування сторінки
 # ===============================
 st.set_page_config(page_title="КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ", page_icon="☢️", layout="wide")
-
 st.markdown("""
 <style>
 #MainMenu, footer, header {visibility: hidden;}
@@ -97,17 +96,16 @@ with col_gui:
 
     st.divider()
     st.markdown("### НАНЕСЕННЯ ТОЧКИ ВИМІРЮВАННЯ ВРУЧНУ")
-    with st.container(border=True):
-        l1 = st.number_input("Широта", format="%.6f", value=st.session_state.get('manual_lat', 50.4501))
-        l2 = st.number_input("Довгота", format="%.6f", value=st.session_state.get('manual_lon', 30.5234))
-        val = st.number_input("Значення", step=0.01, format="%.2f")
-        uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
-        tim = st.date_input("Дата", value=datetime.now()).strftime("%d.%m.%Y")
+    l1 = st.number_input("Широта", format="%.6f", value=st.session_state.get('manual_lat', 50.4501))
+    l2 = st.number_input("Довгота", format="%.6f", value=st.session_state.get('manual_lon', 30.5234))
+    val = st.number_input("Значення", step=0.01, format="%.2f")
+    uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
+    tim = st.date_input("Дата", value=datetime.now()).strftime("%d.%m.%Y")
 
-        if st.button("Нанести на карту"):
-            new_row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
-            st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
-            st.rerun()
+    if st.button("Нанести на карту", use_container_width=True):
+        new_row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
+        st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
+        st.rerun()
 
     st.divider()
     st.markdown("### НАНЕСЕННЯ ТОЧОК ВИМІРЮВАННЯ З ТАБЛИЦІ")
@@ -135,14 +133,14 @@ with col_map:
         s_zoom = 9
 
     m = create_map(st.session_state.data, s_lat, s_lon, s_zoom)
-    map_output = st_folium(m, width="100%", height=750, key="rad_map_click")
+    map_output = st_folium(m, width="100%", height=750, key="rad_map_mobile", returned_objects=[])
 
-    # Кліки на карті
-    if map_output.get("last_clicked"):
+    # Кліки та дотики на карті
+    if map_output.get("last_clicked") and st.session_state.clicked_coords != map_output["last_clicked"]:
         st.session_state.clicked_coords = map_output["last_clicked"]
         st.rerun()
 
-    # Кнопка очистки карти під картою
+    # Кнопка очистки карти
     if st.button("Очистити карту", use_container_width=True):
         st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
         st.session_state.clicked_coords = None
