@@ -25,20 +25,15 @@ if "clicked_coords" not in st.session_state:
     st.session_state.clicked_coords = None
 
 # ===============================
-# 3. Підпис маркеру з синьою рискою по ширині рядка
+# 3. Підпис маркеру
 # ===============================
 def get_custom_marker_html(value_text, date_text):
     return f"""
-<div style="
-    font-family: Arial, sans-serif; font-size: 10pt; color: blue; font-weight: bold;
-    text-align: center; display: inline-block; white-space: nowrap;
-    text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 2px 2px 3px rgba(255,255,255,0.8);
-    background-color: transparent;
-">
-    <div style="margin-bottom:2px;">
+<div style="display: inline-block; font-family: Arial; font-size: 10pt; color: blue; font-weight: bold; text-align: center;
+            background-color: transparent; text-shadow: -1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,2px 2px 3px rgba(255,255,255,0.8);">
+    <div style="white-space: nowrap; border-bottom: 2px solid blue; padding-bottom: 2px; margin-bottom: 2px;">
         {value_text}
     </div>
-    <div style="height:2px; background-color: blue; width: 100%; margin:1px 0;"></div>
     <div style="font-weight: normal;">{date_text}</div>
 </div>
 """
@@ -80,7 +75,7 @@ def create_map(df_data, start_lat, start_lon, zoom_val):
     return m
 
 # ===============================
-# 5. Пульт управління
+# 5. Інтерфейс ПУЛЬТУ УПРАВЛІННЯ
 # ===============================
 st.header("☢️ КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ")
 col_map, col_gui = st.columns([3, 1])
@@ -160,22 +155,5 @@ with col_map:
             st.session_state.data[['lat','lon','value','unit','time']].rename(columns={
                 'lat':'Широта', 'lon':'Довгота', 'value':'Значення', 'unit':'Одиниця', 'time':'Дата'
             }),
-            use_container_width=True
-        )
-
-        # Кнопки для завантаження
-        c1, c2 = st.columns(2)
-        c1.download_button(
-            "Завантажити карту в HTML", 
-            m._repr_html_(), 
-            f"radiation_map_{datetime.now().strftime('%Y%m%d')}.html",
-            "text/html",
-            use_container_width=True
-        )
-        c2.download_button(
-            "Завантажити таблицю", 
-            st.session_state.data.to_csv(index=False).encode('utf-8'),
-            f"radiation_data_{datetime.now().strftime('%Y%m%d')}.csv",
-            "text/csv",
             use_container_width=True
         )
