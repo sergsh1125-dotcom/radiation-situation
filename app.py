@@ -25,7 +25,7 @@ if "clicked_coords" not in st.session_state:
     st.session_state.clicked_coords = None
 
 # ===============================
-# 3. Функція підпису маркеру
+# 3. Підпис маркеру
 # ===============================
 def get_custom_marker_html(value_text, date_text):
     return f"""
@@ -39,11 +39,10 @@ def get_custom_marker_html(value_text, date_text):
 """
 
 # ===============================
-# 4. Функція створення карти
+# 4. Створення карти
 # ===============================
 def create_map(df_data, start_lat, start_lon, zoom_val):
     m = folium.Map(location=[start_lat, start_lon], zoom_start=zoom_val, tiles=None, control_scale=True)
-    
     folium.TileLayer('OpenStreetMap', name='Стандартна карта', show=True).add_to(m)
     folium.TileLayer(
         tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
@@ -60,9 +59,8 @@ def create_map(df_data, start_lat, start_lon, zoom_val):
         for day_val in sorted(df_data['time'].unique(), reverse=True):
             group = folium.FeatureGroup(name=f"📅 {day_val}")
             for _, r in df_data[df_data['time'] == day_val].iterrows():
-                val_label = f"{float(r['value']):.3f} {r['unit']}"
+                val_label = f"{float(r['value']):.2f} {r['unit']}"
                 date_label = str(r['time'])
-                
                 folium.CircleMarker([r.lat, r.lon], radius=6, color="blue", fill=True).add_to(group)
                 folium.Marker(
                     [r.lat, r.lon],
@@ -85,7 +83,7 @@ col_map, col_gui = st.columns([3, 1])
 with col_gui:
     st.subheader("ПУЛЬТ УПРАВЛІННЯ")
 
-    # Відображення координат кліку та кнопок
+    # Координати кліку та кнопки
     if st.session_state.clicked_coords:
         c_lat, c_lon = st.session_state.clicked_coords['lat'], st.session_state.clicked_coords['lng']
         st.write(f"Вибрано: {c_lat:.6f}, {c_lon:.6f}")
@@ -102,11 +100,11 @@ with col_gui:
     with st.container(border=True):
         l1 = st.number_input("Широта", format="%.6f", value=st.session_state.get('manual_lat', 50.4501))
         l2 = st.number_input("Довгота", format="%.6f", value=st.session_state.get('manual_lon', 30.5234))
-        val = st.number_input("Значення", step=0.001, format="%.3f")
+        val = st.number_input("Значення", step=0.01, format="%.2f")
         uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
         tim = st.date_input("Дата", value=datetime.now()).strftime("%d.%m.%Y")
 
-        if st.button("Додати на карту"):
+        if st.button("Нанести на карту"):
             new_row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
             st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
             st.rerun()
@@ -123,23 +121,6 @@ with col_gui:
             st.rerun()
         except Exception as e:
             st.error(f"Помилка файлу: {e}")
-
-    st.divider()
-    # Очистка та експорт
-    st.subheader("💾 Збереження")
-    if not st.session_state.data.empty:
-        e_lat, e_lon = st.session_state.data.lat.mean(), st.session_state.data.lon.mean()
-        m_export = create_map(st.session_state.data, e_lat, e_lon, 9)
-        st.download_button(
-            "🌐 Завантажити HTML карту", 
-            data=m_export._repr_html_(), 
-            file_name=f"radiation_map_{datetime.now().strftime('%Y%m%d')}.html", 
-            mime="text/html", use_container_width=True
-        )
-        if st.button("🧹 Очистити карту", use_container_width=True):
-            st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
-            st.session_state.clicked_coords = None
-            st.rerun()
 
 # ===============================
 # 6. Візуалізація карти
@@ -160,3 +141,19 @@ with col_map:
     if map_output.get("last_clicked"):
         st.session_state.clicked_coords = map_output["last_clicked"]
         st.rerun()
+
+    # Кнопка очистки карти під картою
+    if st.button("Очистити карту", use_container_width=True):
+        st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
+        st.session_state.clicked_coords = None
+        st.rerun()
+
+    # Таблиця під картою
+    if not st.session_state.data.empty:
+        st.subheader("Список нанесених точок вимірювання")
+        st.dataframe(
+            st.session_state.data[['lat','lon','value','unit','time']].rename(columns={
+                'lat':'Широта', 'lon':'Довгота', 'value':'Значення', 'unit':'Одиниця', 'time':'Дата'
+            }),
+            use_container_width=True
+        )
