@@ -8,6 +8,7 @@ from datetime import datetime
 # 1. Налаштування сторінки
 # ===============================
 st.set_page_config(page_title="КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ", page_icon="☢️", layout="wide")
+
 st.markdown("""
 <style>
 #MainMenu, footer, header {visibility: hidden;}
@@ -102,7 +103,7 @@ with col_gui:
     uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
     tim = st.date_input("Дата", value=datetime.now()).strftime("%d.%m.%Y")
 
-    if st.button("Нанести на карту", use_container_width=True):
+    if st.button("Нанести на карту"):
         new_row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
         st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
         st.rerun()
@@ -133,20 +134,25 @@ with col_map:
         s_zoom = 9
 
     m = create_map(st.session_state.data, s_lat, s_lon, s_zoom)
-    map_output = st_folium(m, width="100%", height=750, key="rad_map_mobile", returned_objects=[])
+    
+    # --- ВАЖЛИВО: Передаємо last_clicked для роботи на ПК ---
+    map_output = st_folium(
+        m, width="100%", height=750, key="rad_map_pc",
+        returned_objects=["last_clicked"]
+    )
 
-    # Кліки та дотики на карті
-    if map_output.get("last_clicked") and st.session_state.clicked_coords != map_output["last_clicked"]:
-        st.session_state.clicked_coords = map_output["last_clicked"]
+    clicked = map_output.get("last_clicked")
+    if clicked and st.session_state.clicked_coords != clicked:
+        st.session_state.clicked_coords = clicked
         st.rerun()
 
-    # Кнопка очистки карти
-    if st.button("Очистити карту", use_container_width=True):
-        st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
+    # Кнопки під картою
+    c1, c2 = st.columns(2)
+    if c1.button("Очистити карту", use_container_width=True):
+        st.session_state.data = pd.DataFrame(columns=["lat","lon","value","unit","time"])
         st.session_state.clicked_coords = None
         st.rerun()
 
-    # Таблиця під картою
     if not st.session_state.data.empty:
         st.subheader("Список нанесених точок вимірювання")
         st.dataframe(
@@ -155,3 +161,18 @@ with col_map:
             }),
             use_container_width=True
         )
+
+        if c2.button("Завантажити карту в HTML", use_container_width=True):
+            st.download_button(
+                "Завантажити HTML карту",
+                m._repr_html_(),
+                f"radiation_map_{datetime.now().strftime('%Y%m%d')}.html",
+                "text/html"
+            )
+        if c2.button("Завантажити таблицю", use_container_width=True):
+            st.download_button(
+                "Завантажити CSV таблицю",
+                st.session_state.data.to_csv(index=False),
+                f"radiation_data_{datetime.now().strftime('%Y%m%d')}.csv",
+                "text/csv"
+            )
