@@ -77,64 +77,72 @@ def create_map(df_data, start_lat, start_lon, zoom_val):
     return m
 
 # ===============================
-# 5. Інтерфейс
+# 5. Інтерфейс ПУЛЬТУ УПРАВЛІННЯ
 # ===============================
 st.header("☢️ КАРТА РАДІАЦІЙНОЇ ОБСТАНОВКИ")
 col_map, col_gui = st.columns([3, 1])
 
 with col_gui:
-    st.subheader("⚙️ Управління")
-    
-    # Вибір файлу CSV
-    uploaded_file = st.file_uploader("📁 CSV файл", type=["csv"])
-    if uploaded_file and st.button("Імпортувати дані", use_container_width=True):
+    st.subheader("ПУЛЬТ УПРАВЛІННЯ")
+
+    # Відображення координат кліку та кнопок
+    if st.session_state.clicked_coords:
+        c_lat, c_lon = st.session_state.clicked_coords['lat'], st.session_state.clicked_coords['lng']
+        st.write(f"Вибрано: {c_lat:.6f}, {c_lon:.6f}")
+        row1, row2 = st.columns(2)
+        if row1.button("Вставити координати у форму", use_container_width=True):
+            st.session_state.manual_lat, st.session_state.manual_lon = c_lat, c_lon
+            st.rerun()
+        if row2.button("Виключити маркер на карті", use_container_width=True):
+            st.session_state.clicked_coords = None
+            st.rerun()
+
+    st.divider()
+    st.markdown("### НАНЕСЕННЯ ТОЧКИ ВИМІРЮВАННЯ ВРУЧНУ")
+    with st.container(border=True):
+        l1 = st.number_input("Широта", format="%.6f", value=st.session_state.get('manual_lat', 50.4501))
+        l2 = st.number_input("Довгота", format="%.6f", value=st.session_state.get('manual_lon', 30.5234))
+        val = st.number_input("Значення", step=0.001, format="%.3f")
+        uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
+        tim = st.date_input("Дата", value=datetime.now()).strftime("%d.%m.%Y")
+
+        if st.button("Додати на карту"):
+            new_row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
+            st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
+            st.rerun()
+
+    st.divider()
+    st.markdown("### НАНЕСЕННЯ ТОЧОК ВИМІРЮВАННЯ З ТАБЛИЦІ")
+    uploaded_file = st.file_uploader("Виберіть CSV", type=["csv"], label_visibility="collapsed")
+    if uploaded_file and st.button("Імпортувати з файлу", use_container_width=True):
         try:
             df_new = pd.read_csv(uploaded_file)
             if 'time' in df_new.columns:
                 df_new['time'] = pd.to_datetime(df_new['time'], dayfirst=True, errors='coerce').dt.strftime('%d.%m.%Y')
             st.session_state.data = pd.concat([st.session_state.data, df_new], ignore_index=True)
-            st.success("Дані додано!")
             st.rerun()
         except Exception as e:
-            st.error(f"Помилка: {e}")
+            st.error(f"Помилка файлу: {e}")
 
     st.divider()
-    
-    # Додавання точки вручну
-    st.markdown("### Додати точку вручну")
-    l1 = st.number_input("Широта", format="%.6f", value=50.4501)
-    l2 = st.number_input("Довгота", format="%.6f", value=30.5234)
-    val = st.number_input("Значення", step=0.001, format="%.3f")
-    uni = st.selectbox("Одиниця", ["мкЗв/год", "мЗв/год"])
-    tim = st.date_input("Дата", value=datetime.now()).strftime("%d.%m.%Y")
-
-    if st.button("Додати на карту"):
-        new_row = pd.DataFrame([{"lat": l1, "lon": l2, "value": val, "unit": uni, "time": tim}])
-        st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
-        st.rerun()
-
-    st.divider()
-
     # Очистка та експорт
     st.subheader("💾 Збереження")
     if not st.session_state.data.empty:
         e_lat, e_lon = st.session_state.data.lat.mean(), st.session_state.data.lon.mean()
         m_export = create_map(st.session_state.data, e_lat, e_lon, 9)
-
         st.download_button(
             "🌐 Завантажити HTML карту", 
             data=m_export._repr_html_(), 
             file_name=f"radiation_map_{datetime.now().strftime('%Y%m%d')}.html", 
             mime="text/html", use_container_width=True
         )
-
         if st.button("🧹 Очистити карту", use_container_width=True):
             st.session_state.data = pd.DataFrame(columns=["lat", "lon", "value", "unit", "time"])
             st.session_state.clicked_coords = None
             st.rerun()
 
 # ===============================
-# 6. Візуалізація карти з кліками
+# 6. Візуалізація карти
 # ===============================
 with col_map:
     if st.session_state.data.empty:
@@ -148,9 +156,7 @@ with col_map:
     m = create_map(st.session_state.data, s_lat, s_lon, s_zoom)
     map_output = st_folium(m, width="100%", height=750, key="rad_map_click")
 
-    # Визначення координат кліком на карті
+    # Кліки на карті
     if map_output.get("last_clicked"):
         st.session_state.clicked_coords = map_output["last_clicked"]
-        l1 = st.session_state.clicked_coords['lat']
-        l2 = st.session_state.clicked_coords['lng']
         st.rerun()
